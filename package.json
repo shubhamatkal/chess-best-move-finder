@@ -1,0 +1,24 @@
+{
+  "name": "chess-next-move-finder",
+  "version": "1.0.0",
+  "description": "A tool to find the best next move for any chess position. Currently in progress — the chess position editor is complete and working.",
+  "main": "index.js",
+  "scripts": {
+    "start": "npx serve . --listen 8080",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/shubhamatkal/chess-next-move-finder.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/shubhamatkal/chess-next-move-finder/issues"
+  },
+  "homepage": "https://github.com/shubhamatkal/chess-next-move-finder#readme",
+  "dependencies": {
+    "stockfish": "^18.0.5"
+  }
+}

@@ -1,0 +1,916 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Chess Next Move Finder</title>
+
+  <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
+  <link rel="stylesheet"
+    href="https://unpkg.com/@chrisoakman/chessboardjs@1.0.0/dist/chessboard-1.0.0.min.css" />
+  <script
+    src="https://unpkg.com/@chrisoakman/chessboardjs@1.0.0/dist/chessboard-1.0.0.min.js"></script>
+
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      min-height: 100vh;
+      background: #f5f5f5;
+      font-family: 'Segoe UI', system-ui, sans-serif;
+      color: #222;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 2rem 1rem;
+    }
+
+    h1 {
+      font-size: 1.3rem;
+      font-weight: 700;
+      margin-bottom: 1.5rem;
+      color: #333;
+    }
+
+    /* ── main layout ── */
+    .layout {
+      display: flex;
+      gap: 1.5rem;
+      align-items: flex-start;
+      flex-wrap: wrap;
+      justify-content: center;
+    }
+
+    /* ── board column ── */
+    .board-col {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+
+    #board {
+      width: 400px;
+    }
+
+    /* ── right panel ── */
+    .panel {
+      width: 220px;
+      display: flex;
+      flex-direction: column;
+      gap: 1rem;
+      padding-top: 4px;
+    }
+
+    .section-title {
+      font-size: 0.82rem;
+      font-weight: 700;
+      margin-bottom: 0.4rem;
+      color: #222;
+    }
+
+    /* ── radio / checkbox groups ── */
+    .option-group {
+      display: flex;
+      flex-direction: column;
+      gap: 0.3rem;
+    }
+
+    .option-group label {
+      display: flex;
+      align-items: center;
+      gap: 0.45rem;
+      font-size: 0.85rem;
+      cursor: pointer;
+      color: #333;
+    }
+
+    input[type="radio"],
+    input[type="checkbox"] {
+      accent-color: #2563eb;
+      width: 14px;
+      height: 14px;
+      cursor: pointer;
+    }
+
+    /* ── sliders ── */
+    .slider-row {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+
+    .slider-row label {
+      font-size: 0.82rem;
+      color: #333;
+      white-space: nowrap;
+    }
+
+    .slider-row input[type="range"] {
+      flex: 1;
+      accent-color: #2563eb;
+    }
+
+    .slider-val {
+      font-size: 0.82rem;
+      font-weight: 700;
+      color: #2563eb;
+      min-width: 18px;
+      text-align: right;
+    }
+
+    /* ── action buttons ── */
+    .btn-row {
+      display: flex;
+      gap: 0.5rem;
+      flex-wrap: wrap;
+    }
+
+    .btn {
+      cursor: pointer;
+      border: none;
+      border-radius: 4px;
+      padding: 0.38rem 0.75rem;
+      font-size: 0.82rem;
+      font-weight: 600;
+      color: #2563eb;
+      background: transparent;
+      transition: background 0.12s;
+    }
+
+    .btn:hover { background: #dbeafe; }
+    .btn:active { background: #bfdbfe; transform: scale(0.97); }
+
+    .btn.primary {
+      background: #2563eb;
+      color: #fff;
+    }
+
+    .btn.primary:hover { background: #1d4ed8; }
+    .btn.primary:active { background: #1e40af; }
+
+    .btn.danger {
+      color: #dc2626;
+    }
+
+    .btn.danger:hover { background: #fee2e2; }
+
+    .btn:disabled {
+      opacity: 0.4;
+      cursor: not-allowed;
+      transform: none;
+    }
+
+    /* ── divider ── */
+    .divider {
+      border: none;
+      border-top: 1px solid #d1d5db;
+    }
+
+    /* ── engine status ── */
+    .engine-status {
+      font-size: 0.75rem;
+      color: #6b7280;
+      display: flex;
+      align-items: center;
+      gap: 0.3rem;
+    }
+
+    .status-dot {
+      width: 7px;
+      height: 7px;
+      border-radius: 50%;
+      background: #d1d5db;
+      flex-shrink: 0;
+    }
+
+    .status-dot.ready   { background: #16a34a; }
+    .status-dot.busy    { background: #f59e0b; }
+    .status-dot.error   { background: #dc2626; }
+
+    /* ── best moves panel ── */
+    .moves-panel {
+      background: #fff;
+      border: 1px solid #d1d5db;
+      border-radius: 6px;
+      overflow: hidden;
+    }
+
+    .moves-header {
+      font-size: 0.78rem;
+      font-weight: 700;
+      color: #374151;
+      padding: 0.45rem 0.75rem;
+      background: #f9fafb;
+      border-bottom: 1px solid #e5e7eb;
+    }
+
+    .move-row {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      padding: 0.4rem 0.75rem;
+      border-bottom: 1px solid #f3f4f6;
+      font-size: 0.82rem;
+      cursor: pointer;
+      transition: background 0.1s;
+    }
+
+    .move-row:hover { background: #f0f9ff; }
+
+    .move-row:last-child { border-bottom: none; }
+
+    .move-rank {
+      font-size: 0.7rem;
+      color: #9ca3af;
+      min-width: 12px;
+    }
+
+    .move-san {
+      font-weight: 700;
+      color: #111827;
+      min-width: 48px;
+    }
+
+    .move-eval {
+      font-weight: 700;
+      font-size: 0.8rem;
+      min-width: 50px;
+      text-align: right;
+    }
+
+    .move-eval.positive { color: #16a34a; }
+    .move-eval.negative { color: #dc2626; }
+    .move-eval.mate     { color: #7c3aed; }
+
+    .move-line {
+      color: #6b7280;
+      font-size: 0.75rem;
+      flex: 1;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .moves-empty {
+      padding: 0.75rem;
+      font-size: 0.8rem;
+      color: #9ca3af;
+      text-align: center;
+    }
+
+    /* ── depth progress ── */
+    .depth-info {
+      font-size: 0.72rem;
+      color: #9ca3af;
+      text-align: right;
+      padding: 0 0.1rem;
+    }
+
+    /* ── FEN footer ── */
+    .fen-footer {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      background: #fff;
+      border: 1px solid #d1d5db;
+      border-radius: 6px;
+      padding: 0.5rem 0.9rem;
+      width: 100%;
+      max-width: 680px;
+      margin-top: 0.5rem;
+    }
+
+    .fen-footer.error {
+      border-color: #dc2626;
+    }
+
+    .fen-label {
+      font-size: 0.82rem;
+      font-weight: 700;
+      color: #222;
+      white-space: nowrap;
+      flex-shrink: 0;
+    }
+
+    .fen-copy-btn {
+      cursor: pointer;
+      background: none;
+      border: none;
+      color: #2563eb;
+      font-size: 0.9rem;
+      padding: 0 2px;
+      line-height: 1;
+      flex-shrink: 0;
+    }
+
+    .fen-copy-btn:hover { color: #1d4ed8; }
+
+    .fen-edit-btn {
+      cursor: pointer;
+      background: none;
+      border: none;
+      color: #6b7280;
+      font-size: 0.85rem;
+      padding: 0 2px;
+      line-height: 1;
+      flex-shrink: 0;
+    }
+
+    .fen-edit-btn:hover { color: #374151; }
+
+    #fenInput {
+      font-family: 'Courier New', monospace;
+      font-size: 0.82rem;
+      color: #2563eb;
+      flex: 1;
+      border: none;
+      outline: none;
+      background: transparent;
+      min-width: 0;
+    }
+
+    #fenInput.error { color: #dc2626; }
+
+    .fen-hint {
+      font-size: 0.7rem;
+      color: #9ca3af;
+      white-space: nowrap;
+      flex-shrink: 0;
+    }
+
+    .copy-toast {
+      font-size: 0.72rem;
+      color: #16a34a;
+      opacity: 0;
+      transition: opacity 0.3s;
+      white-space: nowrap;
+    }
+
+    .copy-toast.show { opacity: 1; }
+  </style>
+</head>
+<body>
+
+  <h1>Chess Next Move Finder</h1>
+
+  <div class="layout">
+
+    <!-- Board -->
+    <div class="board-col">
+      <div id="board"></div>
+    </div>
+
+    <!-- Right panel -->
+    <div class="panel">
+
+      <!-- Active Color -->
+      <div>
+        <div class="section-title">Active Color</div>
+        <div class="option-group">
+          <label>
+            <input type="radio" name="activeColor" value="w" id="radioWhite" checked />
+            White to move
+          </label>
+          <label>
+            <input type="radio" name="activeColor" value="b" id="radioBlack" />
+            Black to move
+          </label>
+        </div>
+      </div>
+
+      <hr class="divider" />
+
+      <!-- Castling -->
+      <div>
+        <div class="section-title">Castling Availability</div>
+        <div class="option-group">
+          <label>
+            <input type="checkbox" id="castleWK" checked /> White / kingside
+          </label>
+          <label>
+            <input type="checkbox" id="castleWQ" checked /> White / queenside
+          </label>
+          <label>
+            <input type="checkbox" id="castleBK" checked /> Black / kingside
+          </label>
+          <label>
+            <input type="checkbox" id="castleBQ" checked /> Black / queenside
+          </label>
+        </div>
+      </div>
+
+      <hr class="divider" />
+
+      <!-- Engine settings -->
+      <div>
+        <div class="section-title">Engine</div>
+
+        <div class="slider-row" style="margin-bottom:0.5rem">
+          <label for="depthSlider">Depth</label>
+          <input type="range" id="depthSlider" min="5" max="25" value="18" />
+          <span class="slider-val" id="depthVal">18</span>
+        </div>
+
+        <div class="slider-row">
+          <label for="linesSlider">Lines</label>
+          <input type="range" id="linesSlider" min="1" max="5" value="3" />
+          <span class="slider-val" id="linesVal">3</span>
+        </div>
+      </div>
+
+      <!-- Analyze / Stop buttons -->
+      <div class="btn-row">
+        <button class="btn primary" id="btnAnalyze">Analyze</button>
+        <button class="btn danger"  id="btnStop" disabled>Stop</button>
+      </div>
+
+      <!-- Engine status -->
+      <div class="engine-status">
+        <span class="status-dot" id="statusDot"></span>
+        <span id="statusText">Loading engine…</span>
+      </div>
+
+      <hr class="divider" />
+
+      <!-- Best moves -->
+      <div class="depth-info" id="depthInfo"></div>
+      <div class="moves-panel" id="movesPanel">
+        <div class="moves-header">Best Moves</div>
+        <div class="moves-empty" id="movesEmpty">Press Analyze to start</div>
+      </div>
+
+      <hr class="divider" />
+
+      <!-- Board controls -->
+      <div class="btn-row">
+        <button class="btn" id="btnUndo" title="Undo move" disabled>&#8592;</button>
+        <button class="btn" id="btnRedo" title="Redo move" disabled>&#8594;</button>
+        <button class="btn" id="btnReset">Reset</button>
+        <button class="btn" id="btnClear">Clear</button>
+        <button class="btn" id="btnFlip">Flip</button>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- FEN footer — editable inline -->
+  <div class="fen-footer" id="fenFooter">
+    <span class="fen-label">FEN</span>
+    <button class="fen-copy-btn" id="fenCopyBtn" title="Copy FEN">&#128279;</button>
+    <button class="fen-edit-btn" id="fenEditBtn" title="Edit FEN">&#9998;</button>
+    <input id="fenInput" type="text" spellcheck="false" autocomplete="off" />
+    <span class="fen-hint" id="fenHint">Enter to load</span>
+    <span class="copy-toast" id="copyToast">Copied!</span>
+  </div>
+
+  <script>
+    // ══════════════════════════════════════════════════════════
+    //  Helpers
+    // ══════════════════════════════════════════════════════════
+    const PIECE_FEN = {
+      wK:'K', wQ:'Q', wR:'R', wB:'B', wN:'N', wP:'P',
+      bK:'k', bQ:'q', bR:'r', bB:'b', bN:'n', bP:'p'
+    };
+
+    const PIECE_MAP = {
+      K:'wK', Q:'wQ', R:'wR', B:'wB', N:'wN', P:'wP',
+      k:'bK', q:'bQ', r:'bR', b:'bB', n:'bN', p:'bP'
+    };
+
+    function buildFen(pos) {
+      const files = ['a','b','c','d','e','f','g','h'];
+      let boardStr = '';
+      for (let r = 8; r >= 1; r--) {
+        let empty = 0;
+        for (const f of files) {
+          const p = pos[f + r];
+          if (p) { if (empty) { boardStr += empty; empty = 0; } boardStr += PIECE_FEN[p]; }
+          else empty++;
+        }
+        if (empty) boardStr += empty;
+        if (r > 1) boardStr += '/';
+      }
+      const color  = document.querySelector('input[name="activeColor"]:checked').value;
+      let castle = '';
+      if (document.getElementById('castleWK').checked) castle += 'K';
+      if (document.getElementById('castleWQ').checked) castle += 'Q';
+      if (document.getElementById('castleBK').checked) castle += 'k';
+      if (document.getElementById('castleBQ').checked) castle += 'q';
+      if (!castle) castle = '-';
+      return `${boardStr} ${color} ${castle} - 0 1`;
+    }
+
+    let ignoreNextUpdate = false;
+    function updateFen(oldPos, newPos) {
+      if (ignoreNextUpdate) { ignoreNextUpdate = false; return; }
+      const pos = (newPos !== undefined) ? newPos : board.position();
+      const fenEl = document.getElementById('fenInput');
+      fenEl.value = buildFen(pos);
+      fenEl.classList.remove('error');
+      document.getElementById('fenFooter').classList.remove('error');
+      document.getElementById('fenHint').textContent = 'Enter to load';
+    }
+
+    // ══════════════════════════════════════════════════════════
+    //  Board
+    // ══════════════════════════════════════════════════════════
+    const board = Chessboard('board', {
+      draggable:    true,
+      dropOffBoard: 'trash',
+      sparePieces:  true,
+      position:     'start',
+      pieceTheme:   '/img/chesspieces/wikipedia/{piece}.png',
+      onChange:     updateFen
+    });
+
+    function clearHistory() { moveHistory = []; redoStack = []; updateHistoryButtons(); }
+    document.getElementById('btnReset').addEventListener('click', () => { board.start(); clearHistory(); });
+    document.getElementById('btnClear').addEventListener('click', () => { board.clear(); clearHistory(); });
+    document.getElementById('btnFlip').addEventListener('click',  () => board.flip());
+
+    // ══════════════════════════════════════════════════════════
+    //  FEN copy
+    // ══════════════════════════════════════════════════════════
+    document.getElementById('fenCopyBtn').addEventListener('click', () => {
+      const fen = document.getElementById('fenInput').value;
+      if (!fen) return;
+      navigator.clipboard.writeText(fen).then(() => {
+        const t = document.getElementById('copyToast');
+        t.classList.add('show');
+        setTimeout(() => t.classList.remove('show'), 1600);
+      });
+    });
+
+    // ══════════════════════════════════════════════════════════
+    //  FEN parsing & loading
+    // ══════════════════════════════════════════════════════════
+    function parseFen(fenStr) {
+      const parts = fenStr.trim().split(/\s+/);
+      const boardPart  = parts[0];
+      const colorPart  = parts[1] || 'w';
+      const castlePart = parts[2] || '-';
+
+      const ranks = boardPart.split('/');
+      if (ranks.length !== 8) return null;
+      for (const rank of ranks) {
+        let count = 0;
+        for (const ch of rank) {
+          if (/[1-8]/.test(ch)) count += parseInt(ch, 10);
+          else if (/[kqrbnpKQRBNP]/.test(ch)) count++;
+          else return null;
+        }
+        if (count !== 8) return null;
+      }
+      if (colorPart !== 'w' && colorPart !== 'b') return null;
+      return { boardPart, colorPart, castlePart };
+    }
+
+    function fenToPosition(boardPart) {
+      const files = ['a','b','c','d','e','f','g','h'];
+      const pos = {};
+      const ranks = boardPart.split('/');
+      for (let r = 0; r < 8; r++) {
+        const rankNum = 8 - r;
+        let fileIdx = 0;
+        for (const ch of ranks[r]) {
+          if (/[1-8]/.test(ch)) fileIdx += parseInt(ch, 10);
+          else { pos[files[fileIdx] + rankNum] = PIECE_MAP[ch]; fileIdx++; }
+        }
+      }
+      return pos;
+    }
+
+    function loadFenFromInput() {
+      const fenEl   = document.getElementById('fenInput');
+      const footer  = document.getElementById('fenFooter');
+      const hint    = document.getElementById('fenHint');
+      const parsed  = parseFen(fenEl.value);
+
+      if (!parsed) {
+        fenEl.classList.add('error');
+        footer.classList.add('error');
+        hint.textContent = 'Invalid FEN';
+        return;
+      }
+
+      fenEl.classList.remove('error');
+      footer.classList.remove('error');
+      hint.textContent = 'Enter to load';
+
+      ignoreNextUpdate = true;
+      board.position(fenToPosition(parsed.boardPart), false);
+
+      document.querySelector(`input[name="activeColor"][value="${parsed.colorPart}"]`).checked = true;
+      document.getElementById('castleWK').checked = parsed.castlePart.includes('K');
+      document.getElementById('castleWQ').checked = parsed.castlePart.includes('Q');
+      document.getElementById('castleBK').checked = parsed.castlePart.includes('k');
+      document.getElementById('castleBQ').checked = parsed.castlePart.includes('q');
+
+      fenEl.value = buildFen(fenToPosition(parsed.boardPart));
+      fenEl.blur();
+    }
+
+    document.getElementById('fenEditBtn').addEventListener('click', () => {
+      const fenEl = document.getElementById('fenInput');
+      fenEl.focus();
+      fenEl.select();
+    });
+
+    document.getElementById('fenInput').addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') { e.preventDefault(); loadFenFromInput(); }
+      if (e.key === 'Escape') { e.preventDefault(); updateFen(); e.target.blur(); }
+    });
+
+    document.getElementById('fenInput').addEventListener('input', () => {
+      document.getElementById('fenInput').classList.remove('error');
+      document.getElementById('fenFooter').classList.remove('error');
+      document.getElementById('fenHint').textContent = 'Enter to load';
+    });
+
+    document.querySelectorAll('input[name="activeColor"], input[type="checkbox"]')
+      .forEach(el => el.addEventListener('change', updateFen));
+
+    // ══════════════════════════════════════════════════════════
+    //  Sliders
+    // ══════════════════════════════════════════════════════════
+    const depthSlider = document.getElementById('depthSlider');
+    const linesSlider = document.getElementById('linesSlider');
+    depthSlider.addEventListener('input', () => {
+      document.getElementById('depthVal').textContent = depthSlider.value;
+    });
+    linesSlider.addEventListener('input', () => {
+      document.getElementById('linesVal').textContent = linesSlider.value;
+    });
+
+    // ══════════════════════════════════════════════════════════
+    //  Stockfish engine
+    // ══════════════════════════════════════════════════════════
+    let worker   = null;
+    let engineReady   = false;
+    let analyzing     = false;
+    let currentLines  = {};   // multipv index → { move, eval, line }
+    let targetDepth   = 18;
+
+    function setStatus(state, text) {
+      const dot  = document.getElementById('statusDot');
+      const span = document.getElementById('statusText');
+      dot.className  = 'status-dot ' + state;
+      span.textContent = text;
+    }
+
+    function initEngine() {
+      setStatus('', 'Loading engine…');
+      worker = new Worker('/stockfish.js');
+
+      worker.onmessage = (e) => handleEngineMessage(e.data);
+
+      worker.onerror = (e) => setStatus('error', 'Engine error: ' + (e.message || 'unknown'));
+
+      worker.postMessage('uci');
+      worker.postMessage('isready');
+    }
+
+    // ── Parse centipawn / mate score from a UCI info line ──
+    function parseScore(parts) {
+      const si = parts.indexOf('score');
+      if (si === -1) return null;
+      const type = parts[si + 1];
+      const val  = parseInt(parts[si + 2], 10);
+      if (type === 'mate') return { mate: val };
+      return { cp: val };
+    }
+
+    // ── Format score for display ──
+    function formatScore(score, sideToMove) {
+      const flip = sideToMove === 'b' ? -1 : 1;
+      if (score.mate !== undefined) {
+        const m = score.mate * flip;
+        return { text: (m > 0 ? '+' : '') + 'M' + Math.abs(m), cls: 'mate' };
+      }
+      const cp = score.cp * flip;
+      const pawns = (cp / 100).toFixed(2);
+      return {
+        text: (cp >= 0 ? '+' : '') + pawns,
+        cls:  cp >= 0 ? 'positive' : 'negative'
+      };
+    }
+
+    function formatLine(moves) {
+      return moves.slice(1).join(' ');
+    }
+
+    // ── Move history ──
+    let moveHistory = [];
+    let redoStack   = [];
+
+    function captureState() {
+      return {
+        pos:    board.position(),
+        color:  document.querySelector('input[name="activeColor"]:checked').value,
+        castle: {
+          WK: document.getElementById('castleWK').checked,
+          WQ: document.getElementById('castleWQ').checked,
+          BK: document.getElementById('castleBK').checked,
+          BQ: document.getElementById('castleBQ').checked,
+        }
+      };
+    }
+
+    function restoreState(s) {
+      ignoreNextUpdate = true;
+      board.position(s.pos, false);
+      document.querySelector(`input[name="activeColor"][value="${s.color}"]`).checked = true;
+      document.getElementById('castleWK').checked = s.castle.WK;
+      document.getElementById('castleWQ').checked = s.castle.WQ;
+      document.getElementById('castleBK').checked = s.castle.BK;
+      document.getElementById('castleBQ').checked = s.castle.BQ;
+      updateFen();
+      updateHistoryButtons();
+    }
+
+    function updateHistoryButtons() {
+      document.getElementById('btnUndo').disabled = moveHistory.length === 0;
+      document.getElementById('btnRedo').disabled = redoStack.length === 0;
+    }
+
+    // ── Play a UCI move on the board ──
+    function playUciMove(uciMove) {
+      const from      = uciMove.substr(0, 2);
+      const to        = uciMove.substr(2, 2);
+      const promoChar = uciMove.length > 4 ? uciMove[4].toLowerCase() : null;
+
+      // Save current state for undo
+      moveHistory.push(captureState());
+      redoStack = [];
+      updateHistoryButtons();
+
+      const pos   = board.position();
+      const piece = pos[from];
+      if (!piece) { moveHistory.pop(); updateHistoryButtons(); return; }
+
+      // Handle castling: king moves 2 files
+      if ((piece === 'wK' || piece === 'bK') && Math.abs(from.charCodeAt(0) - to.charCodeAt(0)) === 2) {
+        const rank = from[1];
+        pos[to] = piece;
+        delete pos[from];
+        if (to[0] === 'g') {                      // kingside
+          pos['f' + rank] = piece === 'wK' ? 'wR' : 'bR';
+          delete pos['h' + rank];
+        } else {                                   // queenside
+          pos['d' + rank] = piece === 'wK' ? 'wR' : 'bR';
+          delete pos['a' + rank];
+        }
+      } else {
+        delete pos[from];
+        if (promoChar) {
+          const color = piece[0];
+          const promoMap = { q:'Q', r:'R', b:'B', n:'N' };
+          pos[to] = color + promoMap[promoChar];
+        } else {
+          pos[to] = piece;
+        }
+      }
+
+      ignoreNextUpdate = true;
+      board.position(pos, false);
+      updateFen();
+
+      currentLines = {};
+      renderMoves();
+      document.getElementById('depthInfo').textContent = '';
+    }
+
+    // ── Undo / Redo ──
+    document.getElementById('btnUndo').addEventListener('click', () => {
+      if (moveHistory.length === 0) return;
+      redoStack.push(captureState());
+      restoreState(moveHistory.pop());
+    });
+
+    document.getElementById('btnRedo').addEventListener('click', () => {
+      if (redoStack.length === 0) return;
+      moveHistory.push(captureState());
+      restoreState(redoStack.pop());
+    });
+
+    // ── Render best moves table ──
+    function renderMoves() {
+      const panel = document.getElementById('movesPanel');
+      const sideToMove = document.querySelector('input[name="activeColor"]:checked').value;
+
+      // Remove old rows (keep header)
+      panel.querySelectorAll('.move-row').forEach(r => r.remove());
+      const empty = document.getElementById('movesEmpty');
+
+      const entries = Object.values(currentLines)
+        .sort((a, b) => a.rank - b.rank);
+
+      if (entries.length === 0) {
+        empty.style.display = '';
+        return;
+      }
+      empty.style.display = 'none';
+
+      for (const entry of entries) {
+        const fmt   = formatScore(entry.score, sideToMove);
+        const row   = document.createElement('div');
+        row.className = 'move-row';
+        row.innerHTML = `
+          <span class="move-rank">${entry.rank}.</span>
+          <span class="move-san">${entry.move}</span>
+          <span class="move-eval ${fmt.cls}">${fmt.text}</span>
+          <span class="move-line" title="${entry.line}">${entry.line}</span>
+        `;
+        row.addEventListener('click', () => playUciMove(entry.move));
+        panel.appendChild(row);
+      }
+    }
+
+    function handleEngineMessage(line) {
+      // Ready
+      if (line === 'readyok') {
+        engineReady = true;
+        setStatus('ready', 'Engine ready');
+        document.getElementById('btnAnalyze').disabled = false;
+        return;
+      }
+
+      // Best move final answer
+      if (line.startsWith('bestmove')) {
+        analyzing = false;
+        document.getElementById('btnAnalyze').disabled = false;
+        document.getElementById('btnStop').disabled = true;
+        setStatus('ready', 'Done');
+        renderMoves();
+        return;
+      }
+
+      // Info lines during search
+      if (line.startsWith('info') && line.includes('pv')) {
+        const parts   = line.split(' ');
+        const depthI  = parts.indexOf('depth');
+        const pvI     = parts.indexOf('pv');
+        const mpvI    = parts.indexOf('multipv');
+        if (depthI === -1 || pvI === -1) return;
+
+        const depth   = parseInt(parts[depthI + 1], 10);
+        const rank    = mpvI !== -1 ? parseInt(parts[mpvI + 1], 10) : 1;
+        const moves   = parts.slice(pvI + 1);
+        const score   = parseScore(parts);
+        if (!score || moves.length === 0) return;
+
+        currentLines[rank] = {
+          rank,
+          move:  moves[0],
+          score,
+          line:  formatLine(moves),
+          depth
+        };
+
+        document.getElementById('depthInfo').textContent =
+          `depth ${depth} / ${targetDepth}`;
+
+        // Live update every few depths
+        if (depth % 3 === 0 || depth >= targetDepth) renderMoves();
+      }
+    }
+
+    // ── Analyze ──
+    document.getElementById('btnAnalyze').disabled = true;
+
+    document.getElementById('btnAnalyze').addEventListener('click', () => {
+      if (!engineReady) return;
+
+      const fen   = document.getElementById('fenInput').value.trim();
+      if (!fen) return;
+
+      targetDepth   = parseInt(depthSlider.value, 10);
+      const lines   = parseInt(linesSlider.value, 10);
+
+      currentLines  = {};
+      renderMoves();
+      document.getElementById('depthInfo').textContent = '';
+
+      analyzing = true;
+      document.getElementById('btnAnalyze').disabled = true;
+      document.getElementById('btnStop').disabled = false;
+      setStatus('busy', 'Analyzing…');
+
+      worker.postMessage('stop');
+      worker.postMessage(`setoption name MultiPV value ${lines}`);
+      worker.postMessage(`position fen ${fen}`);
+      worker.postMessage(`go depth ${targetDepth}`);
+    });
+
+    // ── Stop ──
+    document.getElementById('btnStop').addEventListener('click', () => {
+      if (worker) worker.postMessage('stop');
+    });
+
+    // ── Init ──
+    updateFen();
+    initEngine();
+  </script>
+</body>
+</html>
